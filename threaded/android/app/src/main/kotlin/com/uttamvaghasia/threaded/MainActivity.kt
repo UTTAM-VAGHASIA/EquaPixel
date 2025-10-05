@@ -1,0 +1,5 @@
+package com.uttamvaghasia.threaded
+
+import io.flutter.embedding.android.FlutterActivity
+
+class MainActivity : FlutterActivity()
