@@ -3,6 +3,7 @@ import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
 import '../models/frame.dart';
+import '../utils/constants.dart';
 import '../models/thread.dart';
 import '../providers/config_provider.dart';
 import '../providers/string_art_provider.dart';
@@ -63,26 +64,32 @@ class ControlPanel extends StatelessWidget {
                 ChoiceChip(
                   label: Text('Portrait'),
                   selected: false,
-                  onSelected: (_) {
-                    configProvider.loadPreset('portrait');
-                    _updateConfig(context);
-                  },
+                  onSelected: stringArtProvider.isGenerating
+                      ? null
+                      : (_) {
+                          configProvider.loadPreset('portrait');
+                          _updateConfig(context);
+                        },
                 ),
                 ChoiceChip(
                   label: Text('Colorful'),
                   selected: false,
-                  onSelected: (_) {
-                    configProvider.loadPreset('colorful');
-                    _updateConfig(context);
-                  },
+                  onSelected: stringArtProvider.isGenerating
+                      ? null
+                      : (_) {
+                          configProvider.loadPreset('colorful');
+                          _updateConfig(context);
+                        },
                 ),
                 ChoiceChip(
                   label: Text('Detailed'),
                   selected: false,
-                  onSelected: (_) {
-                    configProvider.loadPreset('detailed');
-                    _updateConfig(context);
-                  },
+                  onSelected: stringArtProvider.isGenerating
+                      ? null
+                      : (_) {
+                          configProvider.loadPreset('detailed');
+                          _updateConfig(context);
+                        },
                 ),
               ],
             ),
@@ -196,6 +203,42 @@ class ControlPanel extends StatelessWidget {
                   ? null
                   : (value) {
                       configProvider.setBlurFactor(value);
+                    },
+            ),
+
+            SizedBox(height: 16),
+
+            Text(
+              'Skip Last Nails: ${configProvider.skipLastNails}',
+            ),
+            Slider(
+              value: configProvider.skipLastNails.toDouble(),
+              min: AppConstants.minSkipNails.toDouble(),
+              max: AppConstants.maxSkipNails.toDouble(),
+              divisions: AppConstants.maxSkipNails - AppConstants.minSkipNails,
+              label: configProvider.skipLastNails.toString(),
+              onChanged: stringArtProvider.isGenerating
+                  ? null
+                  : (value) {
+                      configProvider.setSkipLastNails(value.toInt());
+                    },
+            ),
+
+            SizedBox(height: 16),
+
+            Text(
+              'Min Error Reduction: ${configProvider.minErrorReduction.toStringAsExponential(1)}',
+            ),
+            Slider(
+              value: configProvider.minErrorReduction,
+              min: -0.0001,
+              max: 0.001,
+              divisions: 110,
+              label: configProvider.minErrorReduction.toStringAsExponential(1),
+              onChanged: stringArtProvider.isGenerating
+                  ? null
+                  : (value) {
+                      configProvider.setMinErrorReduction(value);
                     },
             ),
 

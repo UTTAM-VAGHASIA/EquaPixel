@@ -28,7 +28,7 @@ class StringArtCanvas extends StatelessWidget {
                 ),
                 painter: StringArtPainter(
                   connections: stringArtProvider.connections,
-                  frame: stringArtProvider.config?.frame,
+                  frame: stringArtProvider.activeFrame ?? stringArtProvider.config?.frame,
                   approximationImage: stringArtProvider.approximationImage,
                 ),
               ),

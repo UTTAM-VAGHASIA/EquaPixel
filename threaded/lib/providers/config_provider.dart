@@ -23,7 +23,7 @@ class ConfigProvider extends ChangeNotifier {
   int _maxIterationsPerColor = AppConstants.defaultIterations;
   double _blurFactor = AppConstants.defaultBlurFactor;
   int _skipLastNails = AppConstants.defaultSkipNails;
-  final double _minErrorReduction = 0.0;
+  double _minErrorReduction = AppConstants.defaultMinErrorReduction;
 
   // Getters
   FrameShape get frameShape => _frameShape;
@@ -78,6 +78,11 @@ class ConfigProvider extends ChangeNotifier {
       AppConstants.minSkipNails,
       AppConstants.maxSkipNails,
     );
+    notifyListeners();
+  }
+
+  void setMinErrorReduction(double value) {
+    _minErrorReduction = value;
     notifyListeners();
   }
 

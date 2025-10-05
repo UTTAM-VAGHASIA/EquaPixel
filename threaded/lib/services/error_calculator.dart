@@ -40,34 +40,40 @@ class ErrorCalculator {
         continue;
       }
 
-      // Get original pixel color
+      // Get original and current approximation (blurred)
       final originalPixel = originalBlurred.getPixel(bx, by);
-      Color original = Color.fromARGB(
+      final currentPixel = currentApproximationBlurred.getPixel(bx, by);
+
+      final Color original = Color.fromARGB(
         255,
         originalPixel.r.toInt(),
         originalPixel.g.toInt(),
         originalPixel.b.toInt(),
       );
-
-      // Get current approximation
-      final currentPixel = currentApproximationBlurred.getPixel(bx, by);
-      Color current = Color.fromARGB(
+      final Color current = Color.fromARGB(
         255,
         currentPixel.r.toInt(),
         currentPixel.g.toInt(),
         currentPixel.b.toInt(),
       );
 
-      // Calculate error before
-      errorBefore += ColorUtils.calculateAsymmetricError(original, current);
+      // Compute luminance in linear space
+      final double Lorig = ColorUtils.luminanceLinear(original);
+      final double Lcurr = ColorUtils.luminanceLinear(current);
 
-      // Simulate adding thread
-      Color afterThread = ColorUtils.blendColors(
+      // Error before (squared residual on luminance)
+      final double residBefore = Lorig - Lcurr;
+      errorBefore += residBefore * residBefore;
+
+      // Simulate adding thread in linear space and recompute luminance
+      final Color blended = ColorUtils.blendColorsLinear(
         current,
         thread.color,
         thread.opacity,
       );
-      errorAfter += ColorUtils.calculateAsymmetricError(original, afterThread);
+      final double Lafter = ColorUtils.luminanceLinear(blended);
+      final double residAfter = Lorig - Lafter;
+      errorAfter += residAfter * residAfter;
     }
 
     return errorBefore - errorAfter;

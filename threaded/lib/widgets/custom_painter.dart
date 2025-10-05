@@ -72,8 +72,14 @@ class StringArtPainter extends CustomPainter {
   }
 
   void _drawConnection(Canvas canvas, Connection connection) {
-    Nail fromNail = frame!.nails[connection.fromNailId];
-    Nail toNail = frame!.nails[connection.toNailId];
+    // Guard against invalid indices (can happen if frame changed mid-stream)
+    if (frame == null) return;
+    final nails = frame!.nails;
+    if (connection.fromNailId < 0 || connection.fromNailId >= nails.length) return;
+    if (connection.toNailId < 0 || connection.toNailId >= nails.length) return;
+
+    Nail fromNail = nails[connection.fromNailId];
+    Nail toNail = nails[connection.toNailId];
 
     final paint = Paint()
       ..color = connection.thread.color.withValues(alpha: connection.thread.opacity)

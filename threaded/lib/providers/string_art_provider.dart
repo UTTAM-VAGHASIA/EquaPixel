@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:image/image.dart' as img;
 import '../models/connection.dart';
+import '../models/frame.dart';
 import '../models/string_art_config.dart';
 import '../models/thread.dart';
 import '../services/error_calculator.dart';
@@ -28,6 +29,7 @@ class StringArtProvider extends ChangeNotifier {
 
   // Configuration
   StringArtConfig? _config;
+  Frame? _activeFrame; // frozen frame used during current generation
 
   // Service instances
   StringArtGenerator? _generator;
@@ -42,6 +44,7 @@ class StringArtProvider extends ChangeNotifier {
   Thread? get currentThread => _currentThread;
   StringArtConfig? get config => _config;
   int get totalConnections => _connections.length;
+  Frame? get activeFrame => _activeFrame;
 
   // Computed properties
   bool get isGenerating => _status == GenerationStatus.generating;
@@ -89,11 +92,15 @@ class StringArtProvider extends ChangeNotifier {
     if (!canGenerate) return;
 
     try {
+      if (kDebugMode) {
+        print('[Provider] startGeneration: nails=${_config!.frame.nails.length}, frame=${_config!.frame.shape}, size=${_config!.frame.size}, threads=${_config!.threads.length}');
+      }
       _status = GenerationStatus.generating;
       _progress = 0.0;
       _connections.clear();
       _errorMessage = null;
       _approximationImage = null;
+      _activeFrame = _config!.frame; // freeze frame for rendering consistency
       notifyListeners();
 
       // Preprocess image to match frame size
@@ -137,11 +144,17 @@ class StringArtProvider extends ChangeNotifier {
       if (_status != GenerationStatus.cancelled) {
         _status = GenerationStatus.completed;
         _progress = 1.0;
+        if (kDebugMode) {
+          print('[Provider] generation completed: connections=${_connections.length}');
+        }
         notifyListeners();
       }
     } catch (e) {
       _errorMessage = 'Generation failed: ${e.toString()}';
       _status = GenerationStatus.error;
+      if (kDebugMode) {
+        print('[Provider] generation error: $e');
+      }
       notifyListeners();
     }
   }

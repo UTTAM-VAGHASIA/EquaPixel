@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:image/image.dart' as img;
 import '../models/connection.dart';
 import '../models/nail.dart';
@@ -44,6 +45,8 @@ class StringArtGenerator {
   final List<Connection> _connections = [];
   final Set<int> _recentNails = {};
   bool _isCancelled = false;
+  int _iterationsSinceRestart = 0;
+  int _plateauSteps = 0;
 
   StringArtGenerator({
     required this.config,
@@ -83,21 +86,28 @@ class StringArtGenerator {
     Thread thread,
     int threadIndex,
   ) async* {
+    if (kDebugMode) {
+      debugPrint('[Generator] Start thread ${thread.name} (#${threadIndex + 1}/${config.threads.length})');
+      debugPrint('[Generator] params: iterations=${config.maxIterationsPerColor}, blur=${config.blurFactor}, skipLast=${config.skipLastNails}, minErr=${config.minErrorReduction.toStringAsFixed(6)}');
+    }
     int currentNailId = 0;
     _recentNails.clear();
 
     int totalIterations = config.maxIterationsPerColor;
 
+    double dynamicThreshold = AppConstants.initialMinReduction;
     for (int iteration = 0; iteration < totalIterations; iteration++) {
       if (_isCancelled) break;
 
       int? bestNailId;
-      double bestErrorReduction = config.minErrorReduction;
+      double bestErrorReduction = -double.infinity;
+      int candidateEvaluations = 0;
 
       // Try all possible next nails
       for (Nail candidate in config.frame.nails) {
         if (candidate.id == currentNailId) continue;
         if (_recentNails.contains(candidate.id)) continue;
+        candidateEvaluations++;
 
         Nail currentNail = config.frame.nails[currentNailId];
         List<Offset> linePixels = BresenhamLine.getPixels(
@@ -118,8 +128,21 @@ class StringArtGenerator {
         }
       }
 
-      // No improvement found
-      if (bestNailId == null) break;
+      // Adaptive acceptance: accept small or negative moves within allowance
+      if (bestNailId == null) {
+        if (kDebugMode) {
+          debugPrint('[Generator] no candidate at iter=$iteration, attempting plateau allowance');
+        }
+        if (_plateauSteps >= AppConstants.plateauAllowance) {
+          if (kDebugMode) {
+            debugPrint('[Generator] early stop at iter=$iteration (plateau exceeded), nail=$currentNailId, candidates=$candidateEvaluations');
+          }
+          break;
+        } else {
+          _plateauSteps++;
+          continue;
+        }
+      }
 
       // Commit the connection
       Connection connection = Connection(
@@ -139,10 +162,52 @@ class StringArtGenerator {
       }
 
       currentNailId = bestNailId;
+      _iterationsSinceRestart++;
+
+      // Periodic restart heuristic: jump to a distant nail every N steps
+      if (_iterationsSinceRestart % AppConstants.restartInterval == 0) {
+        // Choose the nail farthest from current to escape local minima
+        final Nail curr = config.frame.nails[currentNailId];
+        double maxDist = -1.0;
+        int farthestId = currentNailId;
+        for (final Nail n in config.frame.nails) {
+          final dx = n.position.dx - curr.position.dx;
+          final dy = n.position.dy - curr.position.dy;
+          final d2 = dx * dx + dy * dy;
+          if (d2 > maxDist) {
+            maxDist = d2;
+            farthestId = n.id;
+          }
+        }
+        if (kDebugMode) {
+          debugPrint('[Generator] restart: iter=$_iterationsSinceRestart, from=$currentNailId -> $farthestId');
+        }
+        currentNailId = farthestId;
+        _recentNails.clear();
+      }
+
+      // Threshold decay
+      if (iteration > 0 && iteration % AppConstants.reductionDecayInterval == 0) {
+        dynamicThreshold = (dynamicThreshold * AppConstants.reductionDecayFactor)
+            .clamp(AppConstants.minReductionFloor, dynamicThreshold);
+        if (kDebugMode) {
+          debugPrint('[Generator] threshold decayed to ${dynamicThreshold.toStringAsExponential(3)}');
+        }
+      }
+
+      // Track plateau: reset when improvement exceeds tolerance
+      if (bestErrorReduction > AppConstants.improvementTolerance) {
+        _plateauSteps = 0;
+      } else {
+        _plateauSteps++;
+      }
 
       // Yield progress periodically
       if (iteration % AppConstants.progressUpdateInterval == 0 ||
           iteration == totalIterations - 1) {
+        if (kDebugMode) {
+          debugPrint('[Generator] iter=$iteration/$totalIterations, thread=${thread.name}, conn=${_connections.length}, lastBest=${bestErrorReduction.toStringAsExponential(3)}');
+        }
         yield GenerationProgress(
           connections: List.from(_connections),
           currentThread: thread,
@@ -196,7 +261,7 @@ class StringArtGenerator {
       approximationImage.setPixel(
         x,
         y,
-        img.ColorRgb8(blended.red, blended.green, blended.blue),
+        img.ColorRgb8(blended.r.toInt(), blended.g.toInt(), blended.b.toInt()),
       );
     }
 
