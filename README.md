@@ -11,7 +11,7 @@ Generate string art from images. Given an input image, the tool simulates a boar
 
 ## Requirements
 - Python 3.9+
-- Dependencies: `numpy`, `Pillow`, `tqdm`, `svgwrite`
+- Dependencies: `numpy`, `Pillow`, `tqdm`, `svgwrite`, `tk`
 
 ## Setup
 
@@ -21,7 +21,7 @@ Recommended virtual environment:
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -U pip
-pip install numpy pillow tqdm svgwrite
+pip install numpy pillow tqdm svgwrite tk
 ```
 
 > macOS/Linux users can activate with `. .venv/bin/activate` and run the same installs.
