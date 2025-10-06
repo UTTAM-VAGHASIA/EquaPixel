@@ -190,23 +190,61 @@ This roadmap will prepare you to implement the advanced Computed Tomography (CT)
 
 ---
 
-### 3.4 Fan Beam Geometry & Generalization
+### 3.4 Fan Beam Geometry & GFST (Critical Section)
 **Concepts to Master:**
 - Parallel beam vs fan beam geometry
-- Why fan beam is relevant for string art
-- Generalized Fourier Slice Theorem (GFST)
-- Non-uniform angular sampling
+- Why fan beam is relevant for string art (nails aren't perpendicular)
+- Generalized Fourier Slice Theorem (GFST) by Zhao et al. (2014)
+- Rebinning transformation from fan to parallel beam
+- Fan angle and detector geometry
 
-**Resources:**
-- Paper: "Generalized fan-beam tomography" (mentioned in Michael Crum's writeup)
-  - PubMed ID: 25080112
-- "Fan-beam CT Image Reconstruction" tutorials
-- Research papers on fan-beam reconstruction
+**Primary Resource:**
+- **CRITICAL PAPER:** "Fan beam image reconstruction with generalized fourier slice theorem" by Zhao, Yang & Yang (2014)
+  - Journal of X-Ray Science and Technology 22 (2014) 415–436
+  - This is THE paper Michael Crum referenced
+  - You now have the full PDF - read it 3+ times
 
-**Practice:**
-- Understand geometry differences
-- Adapt algorithms for fan-beam setup
-- Handle non-perpendicular rays
+**Key Insights from the Paper:**
+1. **Standard Fourier Slice Theorem:**
+   - Parallel beam: 1D FFT of projection = radial line in 2D FFT
+   - Contribution: Single line through center
+
+2. **GFST Extension:**
+   - Fan beam: Contribution is a FAN REGION, not a line
+   - Fan angle = 2 × γ_max (where γ_max relates to detector size)
+   - Pole of fan is at center of Fourier domain
+   - Add up ALL fan regions = complete 2D FFT
+
+3. **Mathematical Core (Equation 19 from paper):**
+   ```
+   F(ηi, ηj) = Δβ Σ Π(γmax, γ(i,j,k)) · R(βk, D·tan(γ))
+                    · exp[-jDη·sin(γ)] · D·cos(γ) · H(ηmax, η)
+   ```
+   Where:
+   - R(βk, s) = fan beam projection data
+   - β = scan angle
+   - s = detector position
+   - γ = fan span angle
+   - D = source to rotation center distance
+
+4. **Key Difference from FBP:**
+   - GFST: Interpolation on projection data
+   - FBP: Interpolation on filtered projection data
+   - GFST: Filtering in Fourier domain (better for noise)
+   - FBP: Ramp filter on projections
+
+**Practice Tasks:**
+1. Work through Equations 1-19 from the paper manually
+2. Understand the rebinning transform (Equation 4)
+3. Trace how one projection creates a fan region
+4. Implement the MATLAB code provided in Section 7
+5. Modify for string art geometry (arbitrary nail positions)
+
+**String Art Connection:**
+- Each string from nail A to nail B = one "projection"
+- String angle relative to image center = projection angle β
+- String brightness/opacity = projection intensity
+- Goal: Find optimal strings whose fan regions sum to target image FFT
 
 ---
 
