@@ -191,6 +191,37 @@ class Thread {
     }
 }
 
+
+function getDominantColors(ctx, width, height, colorCount = 5) {
+    let data = ctx.getImageData(0, 0, width, height).data;
+    let colors = [];
+    for (let i = 0; i < data.length; i += 4) {
+        colors.push([data[i], data[i + 1], data[i + 2]]);
+    }
+
+    // Simple k-means-like clustering
+    let centroids = colors.sort(() => 0.5 - Math.random()).slice(0, colorCount);
+    for (let iter = 0; iter < 10; iter++) {
+        let groups = Array.from({ length: colorCount }, () => []);
+        colors.forEach(c => {
+            let min = Infinity, minIndex = 0;
+            centroids.forEach((cent, j) => {
+                let d = Math.hypot(c[0] - cent[0], c[1] - cent[1], c[2] - cent[2]);
+                if (d < min) { min = d; minIndex = j; }
+            });
+            groups[minIndex].push(c);
+        });
+        centroids = centroids.map((c, i) => {
+            if (groups[i].length === 0) return c;
+            let mean = groups[i].reduce((a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]]);
+            return mean.map(v => v / groups[i].length);
+        });
+    }
+
+    return centroids.map(c => ({ r: c[0], g: c[1], b: c[2] }));
+}
+
+
 // Create the graph
 let graph = {
     init() {
@@ -381,13 +412,18 @@ let graph = {
         this.orig_ctx_data = this.orig_ctx.getImageData(0, 0, this.img.width, this.img.height).data;
         this.current_ctx_data = this.current_ctx.getImageData(0, 0, this.img.width, this.img.height).data;
 
-        this.threads = [
-            new Thread(0, new Color(0, 255, 255, 255)), // C
-            new Thread(0, new Color(255, 0, 255, 255)), // Y
-            new Thread(0, new Color(255, 255, 0, 255)), // M
-            new Thread(0, new Color(0, 0, 0, 255)), // black
-            new Thread(0, new Color(255, 255, 255, 255)) // white
-        ];
+        // this.threads = [
+        //     new Thread(0, new Color(0, 255, 255, 255)), // C
+        //     new Thread(0, new Color(255, 0, 255, 255)), // Y
+        //     new Thread(0, new Color(255, 255, 0, 255)), // M
+        //     new Thread(0, new Color(0, 0, 0, 255)), // black
+        //     new Thread(0, new Color(255, 255, 255, 255)) // white
+        // ];
+
+        // v1: Extract dominant colors dynamically from the uploaded image
+        let dominantColors = getDominantColors(this.img.ctx, this.img.width, this.img.height, 6); // 6 colors
+        this.threads = dominantColors.map(c => new Thread(0, new Color(c.r, c.g, c.b, 255)));
+
         this.svg.select("g")
             .selectAll(".string")
             .remove();
